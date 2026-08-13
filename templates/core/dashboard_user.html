@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="balance-card p-4">
+        <div class="text-uppercase small">Available Balance</div>
+        <div class="amount">{{ user.balance|floatformat:0 }} RWF</div>
+        <a href="{% url 'wallet:withdraw' %}" class="btn btn-vi-orange w-100 mt-3">Withdraw</a>
+        <a href="{% url 'investments:plan_list' %}" class="btn btn-outline-light w-100 mt-2">Invest More</a>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card card-valley p-4 h-100">
+        <h5 class="mb-3">Withdrawal Countdown</h5>
+        <div class="countdown-display" data-countdown-target="{{ next_withdrawal|date:'c' }}">--:--:--</div>
+        <a href="{% url 'wallet:countdown' %}" class="btn btn-outline-vi mt-3 align-self-start">Open Countdown Clock</a>
+      </div>
+    </div>
+  </div>
+
+  <h4 class="mt-5 mb-3">My Investments</h4>
+  {% if investments %}
+    <div class="row g-3">
+      {% for inv in investments %}
+      <div class="col-md-6">
+        <div class="card card-valley p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">{{ inv.plan }}</h6>
+            <span class="badge badge-status-{{ inv.status }}">{{ inv.get_status_display }}</span>
+          </div>
+          <p class="small text-muted mb-1 mt-2">Amount: {{ inv.amount|floatformat:0 }} RWF &bull; Daily: {{ inv.daily_income|floatformat:0 }} RWF</p>
+          {% if inv.status == "approved" %}
+            <div class="progress" role="progressbar" style="height: 10px;">
+              <div class="progress-bar bg-warning" style="width: {{ inv.progress_percent }}%"></div>
+            </div>
+            <p class="small text-muted mt-1 mb-0">Day {{ inv.days_credited }} of {{ inv.duration_days }}{% if inv.is_completed %} &mdash; Completed{% endif %}</p>
+          {% elif inv.status == "pending" %}
+            <p class="small text-muted mb-0">Awaiting admin review of your payment screenshot.</p>
+          {% else %}
+            <p class="small text-danger mb-0">{{ inv.rejection_reason|default:"Rejected by admin." }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">You haven't invested yet. <a href="{% url 'investments:plan_list' %}">Choose a plan</a> to get started.</p>
+  {% endif %}
+
+  <div class="row g-4 mt-4">
+    <div class="col-md-7">
+      <div class="card card-valley p-4">
+        <h5 class="mb-3">Recent Activity</h5>
+        {% if transactions %}
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead><tr><th>Type</th><th>Amount</th><th>Balance After</th><th>Date</th></tr></thead>
+              <tbody>
+                {% for tx in transactions %}
+                <tr>
+                  <td>{{ tx.get_type_display }}</td>
+                  <td class="{% if tx.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ tx.amount|floatformat:0 }} RWF</td>
+                  <td>{{ tx.balance_after|floatformat:0 }} RWF</td>
+                  <td>{{ tx.created_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No activity yet.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-md-5">
+      <div class="card card-valley p-4">
+        <h5 class="mb-3">Withdrawals</h5>
+        {% if withdrawals %}
+          <ul class="list-group list-group-flush">
+            {% for w in withdrawals %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>{{ w.amount|floatformat:0 }} RWF</span>
+              <span class="badge badge-status-{{ w.status }}">{{ w.get_status_display }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">No withdrawal requests yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

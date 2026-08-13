@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Valley Investment - Invest Today, Grow Tomorrow{% endblock %}
+
+{% block content %}
+<section class="hero-valley text-center">
+  <div class="container">
+    <div class="tagline mb-2">INVEST TODAY &bull; GROW TOMORROW &bull; SECURE YOUR FUTURE</div>
+    <h1 class="display-4 fw-bold">Valley <span class="text-warning">Investment</span></h1>
+    <p class="lead">Choose a plan, pay securely, and watch your daily income grow for 50 days.</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+      {% if not user.is_authenticated %}
+        <a href="{% url 'accounts:signup' %}" class="btn btn-vi-orange btn-lg px-4">Get Started</a>
+        <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg px-4">Login</a>
+      {% else %}
+        <a href="{% url 'core:dashboard_redirect' %}" class="btn btn-vi-orange btn-lg px-4">Go to Dashboard</a>
+      {% endif %}
+      {% if site_settings.whatsapp_number %}
+        <a href="https://wa.me/{{ site_settings.whatsapp_number }}" target="_blank" class="btn btn-success btn-lg px-4">
+          <i class="bi bi-whatsapp"></i> {{ site_settings.whatsapp_number }}
+        </a>
+      {% endif %}
+      {% if site_settings.whatsapp_group_url %}
+        <a href="{{ site_settings.whatsapp_group_url }}" target="_blank" class="btn btn-outline-light btn-lg px-4">
+          <i class="bi bi-whatsapp"></i> WhatsApp Group
+        </a>
+      {% endif %}
+      {% if site_settings.telegram_group_url %}
+        <a href="{{ site_settings.telegram_group_url }}" target="_blank" class="btn btn-outline-light btn-lg px-4">
+          <i class="bi bi-telegram"></i> Telegram Group
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="container my-5">
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card card-valley p-3 text-center h-100">
+        <i class="bi bi-calendar-week fs-2 text-warning"></i>
+        <h5 class="mt-2">Working Days</h5>
+        <p class="mb-0">Monday - Saturday<br>Sunday: Closed</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-valley p-3 text-center h-100">
+        <i class="bi bi-clock fs-2 text-warning"></i>
+        <h5 class="mt-2">Withdrawal Hours</h5>
+        <p class="mb-0">Opening: 06:30 AM<br>Closing: 23:30 PM</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-valley p-3 text-center h-100">
+        <i class="bi bi-gift fs-2 text-warning"></i>
+        <h5 class="mt-2">Welcome Bonus</h5>
+        <p class="mb-0">1000 RWF on your first approved investment<br>+ 8% referral commission</p>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="text-center mb-4">Investment Plans</h2>
+  <div class="table-responsive card-valley">
+    <table class="table table-valley align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Products</th>
+          <th>Price</th>
+          <th>Daily Income</th>
+          <th>All Return</th>
+          <th>Day</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+        <tr>
+          <td class="fw-bold">Valley Lev {{ plan.level }}</td>
+          <td>{{ plan.price|floatformat:0 }} &times;12%</td>
+          <td>{{ plan.daily_income|floatformat:0 }} frw</td>
+          <td>{{ plan.all_return|floatformat:0 }} frw</td>
+          <td>{{ plan.duration_days }} days</td>
+          <td>
+            {% if user.is_authenticated and not user.is_staff %}
+              <a href="{% url 'investments:invest' plan.id %}" class="btn btn-vi-orange btn-sm">Invest</a>
+            {% elif not user.is_authenticated %}
+              <a href="{% url 'accounts:login' %}?next={% url 'investments:invest' plan.id %}" class="btn btn-outline-vi btn-sm">Invest</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

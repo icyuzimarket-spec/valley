@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Pay for Valley Lev {{ plan.level }} - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7">
+      <div class="card card-valley p-4">
+        <h3 class="mb-3">Valley Lev {{ plan.level }} &mdash; {{ plan.price|floatformat:0 }} RWF</h3>
+        <ul class="list-group list-group-flush mb-4">
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Daily Income</span><strong>{{ plan.daily_income|floatformat:0 }} RWF</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>All Return ({{ plan.duration_days }} days)</span><strong>{{ plan.all_return|floatformat:0 }} RWF</strong>
+          </li>
+        </ul>
+
+        <div class="alert alert-primary">
+          <h5><i class="bi bi-cash-coin"></i> Payment Instructions</h5>
+          <p class="mb-1">Send <strong>{{ plan.price|floatformat:0 }} RWF</strong> to:</p>
+          <p class="mb-1">Payee Name: <strong>{{ site_settings.payee_name|default:"Contact admin" }}</strong></p>
+          <p class="{% if site_settings.payment_code %}mb-3{% else %}mb-0{% endif %}">Payment Code: <strong>{{ site_settings.payment_code|default:"Contact admin" }}</strong></p>
+          {% if site_settings.payment_code %}
+            <a href="tel:*182*8*{{ site_settings.payment_code }}%23" class="btn btn-vi-orange w-100">
+              <i class="bi bi-telephone-fill"></i> Dial to Pay via MoMo (*182*8*{{ site_settings.payment_code }}#)
+            </a>
+          {% endif %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Upload Payment Screenshot</label>
+            {% render_field form.payment_screenshot class="form-control" %}
+            {% for error in form.payment_screenshot.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <button type="submit" class="btn btn-vi-orange w-100">Submit for Review</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

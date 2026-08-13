@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Withdraw - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center g-4">
+    <div class="col-md-6">
+      <div class="balance-card p-4 mb-4">
+        <div class="text-uppercase small">Available Balance</div>
+        <div class="amount">{{ user.balance|floatformat:0 }} RWF</div>
+      </div>
+
+      <div class="card card-valley p-4">
+        <h4 class="mb-3">Request Withdrawal</h4>
+
+        {% if is_open_now %}
+          <span class="badge bg-success mb-3">Withdrawals OPEN now</span>
+        {% else %}
+          <div class="mb-3">
+            <span class="badge bg-secondary">Next window opens in</span>
+            <div class="countdown-display" data-countdown-target="{{ next_eligible|date:'c' }}">--:--:--</div>
+          </div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Amount (RWF)</label>
+            {% render_field form.amount class="form-control" %}
+            {% for error in form.amount.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          <button type="submit" class="btn btn-vi-orange w-100" {% if not is_open_now %}disabled{% endif %}>
+            Request Withdrawal
+          </button>
+        </form>
+        <p class="text-muted small mt-2 mb-0">Withdrawals run 24/6 (Mon-Sat), 06:30 AM - 23:30 PM. No withdrawals on Sunday. One request every 24 hours.</p>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card card-valley p-4">
+        <h4 class="mb-3">Withdrawal History</h4>
+        {% if history %}
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead><tr><th>Amount</th><th>Status</th><th>Requested</th></tr></thead>
+              <tbody>
+                {% for w in history %}
+                <tr>
+                  <td>{{ w.amount|floatformat:0 }} RWF</td>
+                  <td><span class="badge badge-status-{{ w.status }}">{{ w.get_status_display }}</span></td>
+                  <td>{{ w.requested_at|date:"M d, H:i" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No withdrawal requests yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Profile - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center g-4">
+    <div class="col-md-6">
+      <div class="card card-valley p-4">
+        <h4 class="mb-3">Personal Info</h4>
+        <p><strong>Phone Number:</strong> {{ user.phone_number }}</p>
+        <p><strong>Joined:</strong> {{ user.date_joined|date:"M d, Y" }}</p>
+        <p><strong>Balance:</strong> {{ user.balance|floatformat:0 }} RWF</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_full_name" class="form-label">Full Name</label>
+            {% render_field form.full_name class="form-control" id="id_full_name" %}
+          </div>
+          <button type="submit" class="btn btn-vi-orange">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    {% if not user.is_staff %}
+    <div class="col-md-6">
+      <div class="card card-valley p-4">
+        <h4 class="mb-3"><i class="bi bi-people"></i> Referral Program</h4>
+        <p>Share your referral link. When a friend signs up and their first investment is approved, you earn an <strong>8% commission</strong>.</p>
+        <label class="form-label">Your Referral Code</label>
+        <p class="fs-4 fw-bold text-warning">{{ user.referral_code }}</p>
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" id="referral-link" value="{{ referral_link }}" readonly>
+          <button class="btn btn-outline-vi" type="button" id="copy-referral-btn"><i class="bi bi-clipboard"></i> Copy</button>
+        </div>
+        <button class="btn btn-vi-orange" type="button" id="share-referral-btn"><i class="bi bi-share"></i> Share Referral Link</button>
+        <p class="text-muted small mt-2 mb-0">Referred by: {{ user.referred_by|default:"Valley Investment" }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.getElementById("copy-referral-btn")?.addEventListener("click", function () {
+    var input = document.getElementById("referral-link");
+    navigator.clipboard.writeText(input.value).then(function () {
+      var btn = document.getElementById("copy-referral-btn");
+      btn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+      setTimeout(function () { btn.innerHTML = '<i class="bi bi-clipboard"></i> Copy'; }, 2000);
+    });
+  });
+
+  document.getElementById("share-referral-btn")?.addEventListener("click", function () {
+    var link = document.getElementById("referral-link").value;
+    if (navigator.share) {
+      navigator.share({ title: "Valley Investment", text: "Join Valley Investment using my referral link:", url: link });
+    } else {
+      navigator.clipboard.writeText(link);
+      alert("Referral link copied to clipboard: " + link);
+    }
+  });
+</script>
+{% endblock %}

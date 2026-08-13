@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Review Withdrawals - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h3 class="mb-0">Pending Withdrawal Reviews</h3>
+    <a href="{% url 'core:management_users' %}" class="btn btn-outline-vi btn-sm">&larr; User Management</a>
+  </div>
+
+  {% if pending %}
+    <div class="card card-valley p-0">
+      <div class="table-responsive">
+        <table class="table table-valley align-middle mb-0">
+          <thead><tr><th>User</th><th>Amount</th><th>Requested</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for w in pending %}
+            <tr>
+              <td>{{ w.user }} ({{ w.user.phone_number }})</td>
+              <td>{{ w.amount|floatformat:0 }} RWF</td>
+              <td>{{ w.requested_at|date:"M d, Y H:i" }}</td>
+              <td>
+                <div class="d-flex gap-2">
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="withdrawal_id" value="{{ w.id }}">
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                  </form>
+                  <form method="post" onsubmit="return confirm('Reject and refund this withdrawal?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="withdrawal_id" value="{{ w.id }}">
+                    <input type="hidden" name="action" value="reject">
+                    <input type="hidden" name="reason" value="Rejected by admin">
+                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-muted">No pending withdrawals right now.</p>
+  {% endif %}
+</div>
+{% endblock %}

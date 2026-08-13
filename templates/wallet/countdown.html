@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Countdown Clock - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 text-center">
+      <div class="card card-valley p-5">
+        <h3 class="mb-3"><i class="bi bi-stopwatch"></i> Withdrawal Countdown</h3>
+
+        {% if is_open_now %}
+          <span class="badge bg-success fs-6 mb-3 d-inline-block" data-countdown-open-badge>Withdrawals are OPEN now</span>
+        {% else %}
+          <p class="text-muted">Time until the next withdrawal window opens:</p>
+          <div class="countdown-display mb-3" data-countdown-target="{{ next_eligible|date:'c' }}">--:--:--</div>
+          <span class="badge bg-success fs-6 d-none" data-countdown-open-badge>Withdrawals are OPEN now</span>
+        {% endif %}
+
+        <p class="text-muted mt-4 mb-0">
+          Withdrawals run Monday - Saturday, 06:30 AM to 23:30 PM.<br>
+          Closed on Sundays. One withdrawal request allowed every 24 hours.
+        </p>
+        <a href="{% url 'wallet:withdraw' %}" class="btn btn-vi-orange mt-4">Go to Withdraw</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

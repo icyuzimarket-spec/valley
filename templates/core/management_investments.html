@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Review Investments - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h3 class="mb-0">Pending Investment Reviews</h3>
+    <a href="{% url 'core:management_users' %}" class="btn btn-outline-vi btn-sm">&larr; User Management</a>
+  </div>
+
+  {% if pending %}
+    <div class="row g-4">
+      {% for inv in pending %}
+      <div class="col-md-6">
+        <div class="card card-valley p-3">
+          <h6>{{ inv.user }} &mdash; {{ inv.plan }}</h6>
+          <p class="small text-muted mb-2">Amount: {{ inv.amount|floatformat:0 }} RWF &bull; Submitted: {{ inv.created_at|date:"M d, Y H:i" }}</p>
+          <a href="{{ inv.payment_screenshot.url }}" target="_blank">
+            <img src="{{ inv.payment_screenshot.url }}" class="img-fluid rounded mb-3" style="max-height: 320px; object-fit: contain;">
+          </a>
+          <div class="d-flex gap-2">
+            <form method="post" class="flex-fill">
+              {% csrf_token %}
+              <input type="hidden" name="investment_id" value="{{ inv.id }}">
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-success w-100">Approve</button>
+            </form>
+            <form method="post" class="flex-fill" onsubmit="return confirm('Reject this investment?');">
+              {% csrf_token %}
+              <input type="hidden" name="investment_id" value="{{ inv.id }}">
+              <input type="hidden" name="action" value="reject">
+              <input type="hidden" name="reason" value="Payment could not be verified">
+              <button type="submit" class="btn btn-danger w-100">Reject</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">No pending investments right now.</p>
+  {% endif %}
+</div>
+{% endblock %}

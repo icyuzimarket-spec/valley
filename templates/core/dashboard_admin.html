@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h3 class="mb-4">Admin Dashboard</h3>
+  <div class="row g-3">
+    <div class="col-md-3 col-6">
+      <div class="card card-valley p-3 text-center">
+        <div class="fs-2 fw-bold text-primary">{{ stats.total_users }}</div>
+        <div class="text-muted">Total Users</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card card-valley p-3 text-center">
+        <div class="fs-2 fw-bold text-warning">{{ stats.pending_investments }}</div>
+        <div class="text-muted">Pending Investments</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card card-valley p-3 text-center">
+        <div class="fs-2 fw-bold text-warning">{{ stats.pending_withdrawals }}</div>
+        <div class="text-muted">Pending Withdrawals</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card card-valley p-3 text-center">
+        <div class="fs-2 fw-bold text-success">{{ stats.total_invested|floatformat:0 }}</div>
+        <div class="text-muted">Total Invested (RWF)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <div class="card card-valley p-4">
+        <h5>Total Balance Owed to Users</h5>
+        <p class="fs-4 fw-bold text-primary mb-0">{{ stats.total_balance_outstanding|floatformat:0 }} RWF</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-4">
+      <a href="{% url 'core:management_investments' %}" class="btn btn-vi-orange w-100 py-3">Review Investments</a>
+    </div>
+    <div class="col-md-4">
+      <a href="{% url 'core:management_withdrawals' %}" class="btn btn-vi-orange w-100 py-3">Review Withdrawals</a>
+    </div>
+    <div class="col-md-4">
+      <a href="{% url 'core:management_users' %}" class="btn btn-outline-vi w-100 py-3">Manage Users</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Sign Up - Valley Investment{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="container">
+  <div class="row justify-content-center">
+    <div class="col-11 col-sm-8 col-md-6 col-lg-4">
+      <div class="card auth-card p-4 p-md-5">
+        <div class="auth-icon"><i class="bi bi-person-plus"></i></div>
+        <h3 class="text-center mb-4">Create Your Account</h3>
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label for="id_phone_number" class="form-label">Phone Number</label>
+            {% render_field form.phone_number class="form-control" id="id_phone_number" %}
+            {% for error in form.phone_number.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="id_full_name" class="form-label">Full Name</label>
+            {% render_field form.full_name class="form-control" id="id_full_name" %}
+          </div>
+
+          <div class="mb-3 password-toggle-wrapper">
+            <label for="id_password1" class="form-label">Password</label>
+            {% render_field form.password1 class="form-control" id="id_password1" %}
+            <button type="button" class="password-toggle-btn" data-target="id_password1"><i class="bi bi-eye"></i></button>
+            {% for error in form.password1.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3 password-toggle-wrapper">
+            <label for="id_password2" class="form-label">Confirm Password</label>
+            {% render_field form.password2 class="form-control" id="id_password2" %}
+            <button type="button" class="password-toggle-btn" data-target="id_password2"><i class="bi bi-eye"></i></button>
+            {% for error in form.password2.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="id_referral_code" class="form-label">Referral Code <span class="text-muted">(optional)</span></label>
+            {% render_field form.referral_code class="form-control" id="id_referral_code" %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="text-danger small mb-3">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-vi-orange w-100">Sign Up</button>
+        </form>
+        <p class="text-center mt-3 mb-0">Already have an account? <a href="{% url 'accounts:login' %}">Login</a></p>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+{% endblock %}
