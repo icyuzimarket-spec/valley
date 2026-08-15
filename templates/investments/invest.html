@@ -21,10 +21,10 @@
           <h5><i class="bi bi-cash-coin"></i> Payment Instructions</h5>
           <p class="mb-1">Send <strong>{{ plan.price|floatformat:0 }} RWF</strong> to:</p>
           <p class="mb-1">Payee Name: <strong>{{ site_settings.payee_name|default:"Contact admin" }}</strong></p>
-          <p class="{% if site_settings.payment_code %}mb-3{% else %}mb-0{% endif %}">Payment Code: <strong>{{ site_settings.payment_code|default:"Contact admin" }}</strong></p>
+          <p class="{% if site_settings.payment_code %}mb-3{% else %}mb-0{% endif %}">Payment Number: <strong>{{ site_settings.payment_code|default:"Contact admin" }}</strong></p>
           {% if site_settings.payment_code %}
-            <a href="tel:*182*8*{{ site_settings.payment_code }}%23" class="btn btn-vi-orange w-100">
-              <i class="bi bi-telephone-fill"></i> Dial to Pay via MoMo (*182*8*{{ site_settings.payment_code }}#)
+            <a href="tel:*182*1*1*{{ site_settings.payment_code }}%23" class="btn btn-vi-orange w-100">
+              <i class="bi bi-telephone-fill"></i> Dial to Pay via MoMo (*182*1*1*{{ site_settings.payment_code }}#)
             </a>
           {% endif %}
         </div>
