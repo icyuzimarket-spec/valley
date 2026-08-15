@@ -39,6 +39,15 @@ idempotent management command to Windows Task Scheduler:
 schtasks /create /tn "ValleyDailyCredit" /tr "C:\path\to\valley\venv\Scripts\python.exe C:\path\to\valley\manage.py credit_daily_earnings" /sc daily /st 00:05
 ```
 
+## Deploying to PythonAnywhere
+
+See the bash command guide provided separately, or in short: clone the repo
+into a PythonAnywhere Bash console, create a virtualenv, `pip install -r
+requirements.txt`, create a `.env` from `.env.example` (set `DEBUG=False`,
+`ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` to your `*.pythonanywhere.com` domain),
+run `migrate` + `collectstatic`, then wire up the Web tab (source code path,
+virtualenv path, WSGI file, and static/media URL mappings) and reload.
+
 ## Running tests
 
 ```powershell
