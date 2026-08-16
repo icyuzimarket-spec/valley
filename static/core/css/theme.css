@@ -180,6 +180,105 @@ a {
   overflow-y: hidden;
 }
 
+/* ---------- Plan cards ---------- */
+.plan-card {
+  background-color: var(--vi-white);
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(15, 42, 92, 0.09);
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.plan-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--vi-orange-dark), var(--vi-orange));
+}
+
+.plan-card:hover {
+  box-shadow: 0 14px 32px rgba(15, 42, 92, 0.16);
+  transform: translateY(-3px);
+}
+
+.plan-card .plan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.plan-card .plan-title {
+  font-family: "Poppins", "Inter", "Segoe UI", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--vi-navy);
+  margin: 0;
+}
+
+.plan-card .plan-duration {
+  background-color: rgba(245, 144, 30, 0.14);
+  color: var(--vi-orange-dark);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.plan-card .plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #edf1f8;
+}
+
+.plan-card .plan-row:last-of-type {
+  border-bottom: none;
+}
+
+.plan-card .plan-label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #6b7a99;
+  font-size: 0.95rem;
+}
+
+.plan-card .plan-label i {
+  color: var(--vi-orange);
+  font-size: 1.05rem;
+}
+
+.plan-card .plan-value {
+  font-weight: 700;
+  color: var(--vi-navy);
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.plan-card .plan-action {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.plan-card .plan-action .btn {
+  width: 100%;
+  padding: 0.65rem 1rem;
+}
+
 .badge-status-pending { background-color: #f5b942; color: #1a1a1a; }
 .badge-status-approved { background-color: #2ecc71; }
 .badge-status-rejected { background-color: #e74c3c; }
