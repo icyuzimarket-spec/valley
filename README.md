@@ -120,14 +120,27 @@ R2_REGION=auto
 ```
 
 `R2_ENDPOINT` is derived from `R2_ACCOUNT_ID` when it isn't set explicitly.
-R2 is used only when the bucket, both credentials, and an endpoint are all
-present — a partial configuration falls back to local disk rather than failing
-half-configured, so local development and the test suite need no R2 access.
+Leave all of them unset to store uploads on the local disk, which is what
+local development and the test suite use. Setting only some of them is a
+startup error: uploads would otherwise land on a disk the host wipes on every
+redeploy, losing the proof behind an approved investment.
 
 The bucket stays **private**: image URLs are short-lived pre-signed links
 (1 hour), because a proof screenshot shows a real person's payment details.
 Uploads never overwrite an existing key, and no ACL is sent (R2 rejects
-uploads that carry one).
+uploads that carry one). Checksum calculation is pinned to `when_required`:
+boto3 1.36 and later otherwise send every upload as a chunked body with a
+trailing CRC32 checksum, which R2 does not implement, and each upload fails.
+
+To check a deployment end to end — upload, read back, signed URL, delete —
+run this on the host itself:
+
+```
+python manage.py check_r2
+```
+
+It prints the bucket and endpoint in use and reports the storage backend's
+own error when the round trip fails.
 
 ## Running tests
 

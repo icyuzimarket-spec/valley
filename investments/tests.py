@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import BytesIO
 
 from django.contrib.messages import get_messages
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -289,15 +290,15 @@ class R2StorageConfigTests(TestCase):
             "django.core.files.storage.FileSystemStorage",
         )
 
-    def test_partial_credentials_do_not_enable_r2(self):
+    def test_partial_credentials_are_rejected(self):
+        """Half a bucket means proofs land on a disk that gets wiped."""
         partial = dict(self.R2_ENV)
         del partial["R2_SECRET_ACCESS_KEY"]
-        reloaded = reload_settings_with(partial)
-        self.assertFalse(reloaded.USE_R2)
-        self.assertEqual(
-            reloaded.STORAGES["default"]["BACKEND"],
-            "django.core.files.storage.FileSystemStorage",
-        )
+        with self.assertRaises(ImproperlyConfigured) as caught:
+            reload_settings_with(partial)
+        self.assertIn("R2_SECRET_ACCESS_KEY", str(caught.exception))
+        # Leave the module in a usable state for the tests that follow.
+        reload_settings_with({})
 
     def test_r2_backend_selected_and_configured(self):
         reloaded = reload_settings_with(self.R2_ENV)
@@ -310,13 +311,26 @@ class R2StorageConfigTests(TestCase):
         self.assertEqual(options["endpoint_url"], "https://acct123.r2.cloudflarestorage.com")
         self.assertEqual(options["region_name"], "auto")
         # R2 only serves path-style URLs and only signs v4.
-        self.assertEqual(options["addressing_style"], "path")
-        self.assertEqual(options["signature_version"], "s3v4")
+        client_config = options["client_config"]
+        self.assertEqual(client_config.s3["addressing_style"], "path")
+        self.assertEqual(client_config.signature_version, "s3v4")
         # R2 rejects uploads that carry an ACL.
         self.assertIsNone(options["default_acl"])
         # Payment proofs must not be publicly readable.
         self.assertTrue(options["querystring_auth"])
         self.assertFalse(options["file_overwrite"])
+
+    def test_uploads_do_not_use_the_chunked_checksum_flow(self):
+        """R2 has no trailing-checksum support, so boto3's default breaks it.
+
+        Left at boto3's `when_supported` default every PUT goes out as
+        Content-Encoding: aws-chunked with an x-amz-checksum-crc32 trailer,
+        which R2 does not implement.
+        """
+        reloaded = reload_settings_with(self.R2_ENV)
+        client_config = reloaded.STORAGES["default"]["OPTIONS"]["client_config"]
+        self.assertEqual(client_config.request_checksum_calculation, "when_required")
+        self.assertEqual(client_config.response_checksum_validation, "when_required")
 
     def test_endpoint_derived_from_account_id(self):
         env = {k: v for k, v in self.R2_ENV.items() if k != "R2_ENDPOINT"}
