@@ -182,6 +182,49 @@ STORAGES = {
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# --- Payment proof storage (Cloudflare R2) ---
+# Payment screenshots are the only user uploads, and they are the evidence
+# behind every approved investment. On a host with an ephemeral disk they would
+# be lost on each redeploy, so keep them in R2 whenever it is configured. With
+# no R2 credentials the app falls back to local disk, which is what local
+# development and the test suite use.
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "").strip()
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "").strip()
+R2_REGION = os.environ.get("R2_REGION", "auto").strip() or "auto"
+
+# R2's S3 endpoint is derivable from the account ID, so accept either.
+R2_ENDPOINT = os.environ.get("R2_ENDPOINT", "").strip()
+if not R2_ENDPOINT and R2_ACCOUNT_ID:
+    R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+USE_R2 = all([R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT])
+
+if USE_R2:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET_NAME,
+            "access_key": R2_ACCESS_KEY_ID,
+            "secret_key": R2_SECRET_ACCESS_KEY,
+            "endpoint_url": R2_ENDPOINT,
+            "region_name": R2_REGION,
+            # R2 only serves the path-style endpoint, and only signs v4.
+            "addressing_style": "path",
+            "signature_version": "s3v4",
+            # R2 has no ACL support; sending one makes every upload fail.
+            "default_acl": None,
+            "object_parameters": {"CacheControl": "private, max-age=3600"},
+            # Payment proofs identify people and amounts, so the bucket stays
+            # private and every URL is a short-lived signed one.
+            "querystring_auth": True,
+            "querystring_expire": 3600,
+            # Never let one upload silently overwrite another's proof.
+            "file_overwrite": False,
+        },
+    }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Valley Investment business constants ---

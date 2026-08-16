@@ -99,9 +99,35 @@ they override the config file.
    python manage.py create_admin 0783108892 <password> --full-name "Valley Admin"
    ```
 
-Note that uploaded payment screenshots go to `MEDIA_ROOT` on local disk, which
-is also ephemeral — attach a Railway volume mounted at `/app/media` (or move to
-object storage) so proofs survive a redeploy.
+5. Set the Cloudflare R2 variables so payment screenshots survive a redeploy
+   (see below). Without them, uploads go to local disk, which on Railway is
+   erased on every deploy — taking the proof behind every approved investment
+   with it.
+
+## Payment screenshot storage (Cloudflare R2)
+
+Payment proofs are the only user uploads, and they are the evidence behind
+every approved investment, so they are stored in Cloudflare R2 rather than on
+the container's disk. Set these variables to turn it on:
+
+```
+R2_BUCKET_NAME=<bucket>
+R2_ACCESS_KEY_ID=<key id>
+R2_SECRET_ACCESS_KEY=<secret>
+R2_ACCOUNT_ID=<cloudflare account id>     # or set R2_ENDPOINT directly
+R2_ENDPOINT=https://<account id>.r2.cloudflarestorage.com
+R2_REGION=auto
+```
+
+`R2_ENDPOINT` is derived from `R2_ACCOUNT_ID` when it isn't set explicitly.
+R2 is used only when the bucket, both credentials, and an endpoint are all
+present — a partial configuration falls back to local disk rather than failing
+half-configured, so local development and the test suite need no R2 access.
+
+The bucket stays **private**: image URLs are short-lived pre-signed links
+(1 hour), because a proof screenshot shows a real person's payment details.
+Uploads never overwrite an existing key, and no ACL is sent (R2 rejects
+uploads that carry one).
 
 ## Running tests
 
