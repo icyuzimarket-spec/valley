@@ -11,30 +11,36 @@
     </div>
   {% endif %}
 
-  <div class="table-responsive card-valley">
-    <table class="table table-valley align-middle mb-0">
-      <thead>
-        <tr><th>Products</th><th>Price</th><th>Daily Income</th><th>All Return</th><th>Day</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for plan in plans %}
-        <tr>
-          <td class="fw-bold">Valley Lev {{ plan.level }}</td>
-          <td>{{ plan.price|floatformat:0 }} &times;12%</td>
-          <td>{{ plan.daily_income|floatformat:0 }} frw</td>
-          <td>{{ plan.all_return|floatformat:0 }} frw</td>
-          <td>{{ plan.duration_days }} days</td>
-          <td>
-            {% if has_pending %}
-              <button class="btn btn-secondary btn-sm" disabled>Invest</button>
-            {% else %}
-              <a href="{% url 'investments:invest' plan.id %}" class="btn btn-vi-orange btn-sm">Invest</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="row g-4">
+    {% for plan in plans %}
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="plan-card">
+        <div class="plan-head">
+          <h5 class="plan-title">Valley Lev {{ plan.level }}</h5>
+          <span class="plan-duration">{{ plan.duration_days }} days</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-label"><i class="bi bi-cash-coin"></i> Price</span>
+          <span class="plan-value">{{ plan.price|floatformat:0 }} &times;12%</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-label"><i class="bi bi-graph-up-arrow"></i> Daily Income</span>
+          <span class="plan-value">{{ plan.daily_income|floatformat:0 }} frw</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-label"><i class="bi bi-trophy"></i> All Return</span>
+          <span class="plan-value">{{ plan.all_return|floatformat:0 }} frw</span>
+        </div>
+        <div class="plan-action">
+          {% if has_pending %}
+            <button class="btn btn-secondary" disabled>Invest</button>
+          {% else %}
+            <a href="{% url 'investments:invest' plan.id %}" class="btn btn-outline-vi">Invest</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}
