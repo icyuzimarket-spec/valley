@@ -5,6 +5,7 @@ Django settings for valley_investment project.
 import os
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -198,6 +199,16 @@ R2_REGION = os.environ.get("R2_REGION", "auto").strip() or "auto"
 R2_ENDPOINT = os.environ.get("R2_ENDPOINT", "").strip()
 if not R2_ENDPOINT and R2_ACCOUNT_ID:
     R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+# Cloudflare's bucket page shows the S3 API address with the bucket appended
+# ("https://<account>.r2.cloudflarestorage.com/<bucket>"), which is the value
+# people copy into R2_ENDPOINT. boto3 wants the host on its own and appends the
+# bucket itself, so leaving the path on turns every request into
+# /<bucket>/<bucket>/<key> and nothing can be stored or fetched. An S3 endpoint
+# never legitimately carries a path, so drop it.
+if R2_ENDPOINT:
+    _r2_parts = urlsplit(R2_ENDPOINT if "//" in R2_ENDPOINT else f"https://{R2_ENDPOINT}")
+    R2_ENDPOINT = urlunsplit((_r2_parts.scheme or "https", _r2_parts.netloc, "", "", ""))
 
 _R2_SETTINGS = {
     "R2_BUCKET_NAME": R2_BUCKET_NAME,

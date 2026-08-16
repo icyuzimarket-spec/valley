@@ -66,7 +66,8 @@ class Command(BaseCommand):
             raise
         except Exception as exc:
             raise CommandError(
-                f"R2 round trip failed: {type(exc).__name__}: {exc}"
+                f"R2 round trip failed: {type(exc).__name__}: {exc}\n\n"
+                + self._hint_for(exc)
             ) from exc
         finally:
             if name and not options["keep"]:
@@ -76,3 +77,36 @@ class Command(BaseCommand):
                     self.stderr.write(f"Could not delete probe object {name}: {exc}")
 
         self.stdout.write(self.style.SUCCESS("R2 is working."))
+
+    def _hint_for(self, exc):
+        """Translate the usual R2 rejections into the thing to go and change."""
+        text = f"{type(exc).__name__}: {exc}".lower()
+
+        if "nosuchbucket" in text or "404" in text:
+            return (
+                "The bucket was not found at this endpoint. Check that "
+                f"R2_BUCKET_NAME ({settings.R2_BUCKET_NAME}) matches the bucket "
+                "in Cloudflare, and that R2_ENDPOINT is only the host - the "
+                "address Cloudflare shows on the bucket page has the bucket "
+                "name appended, which does not belong in the endpoint."
+            )
+        if "accessdenied" in text or "403" in text or "invalidaccesskeyid" in text:
+            return (
+                "The credentials were rejected. Confirm the API token still "
+                "exists, has Object Read & Write on this bucket, and that "
+                "R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY are the token's own "
+                "pair rather than a Cloudflare global key. A bucket created "
+                "under an EU jurisdiction also needs the jurisdiction endpoint "
+                "(https://<account>.eu.r2.cloudflarestorage.com)."
+            )
+        if "notimplemented" in text or "501" in text or "checksum" in text:
+            return (
+                "R2 rejected the upload encoding. This is the boto3 1.36+ "
+                "chunked-checksum default; settings pins checksum calculation "
+                "to 'when_required' to avoid it, so check that this deploy is "
+                "running current code and that boto3 matches requirements.txt."
+            )
+        return (
+            "Check the endpoint, bucket name and token permissions in the "
+            "Cloudflare R2 dashboard against the values printed above."
+        )
