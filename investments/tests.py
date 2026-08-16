@@ -342,6 +342,38 @@ class R2StorageConfigTests(TestCase):
             "https://abc123account.r2.cloudflarestorage.com",
         )
 
+    def test_bucket_suffix_is_stripped_from_the_endpoint(self):
+        """Cloudflare shows the S3 address with the bucket already appended.
+
+        boto3 appends the bucket itself, so leaving it on the endpoint sends
+        every request to /<bucket>/<bucket>/<key>.
+        """
+        env = dict(self.R2_ENV)
+        env["R2_ENDPOINT"] = "https://acct123.r2.cloudflarestorage.com/valley-proofs"
+        reloaded = reload_settings_with(env)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["OPTIONS"]["endpoint_url"],
+            "https://acct123.r2.cloudflarestorage.com",
+        )
+
+    def test_trailing_slash_is_stripped_from_the_endpoint(self):
+        env = dict(self.R2_ENV)
+        env["R2_ENDPOINT"] = "https://acct123.r2.cloudflarestorage.com/"
+        reloaded = reload_settings_with(env)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["OPTIONS"]["endpoint_url"],
+            "https://acct123.r2.cloudflarestorage.com",
+        )
+
+    def test_endpoint_without_a_scheme_still_resolves(self):
+        env = dict(self.R2_ENV)
+        env["R2_ENDPOINT"] = "acct123.r2.cloudflarestorage.com"
+        reloaded = reload_settings_with(env)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["OPTIONS"]["endpoint_url"],
+            "https://acct123.r2.cloudflarestorage.com",
+        )
+
     def test_explicit_endpoint_wins_over_account_id(self):
         env = dict(self.R2_ENV)
         env["R2_ACCOUNT_ID"] = "ignored-account"
