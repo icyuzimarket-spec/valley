@@ -2,8 +2,10 @@ from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
 
+from django.contrib.messages import get_messages
+from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 
@@ -225,3 +227,169 @@ class EndToEndFlowTests(TestCase):
 
         referrer.refresh_from_db()
         self.assertEqual(referrer.balance, Decimal("1600.00"))
+
+
+class RecordingStorage(FileSystemStorage):
+    """Stands in for R2 in tests: behaves like local disk but records what the
+    upload path asked it to store, so we can assert uploads go through the
+    configured default storage rather than a hardcoded location."""
+
+    saved = []
+
+    def _save(self, name, content):
+        RecordingStorage.saved.append(name)
+        return super()._save(name, content)
+
+
+class FailingStorage(FileSystemStorage):
+    """Simulates R2 being unreachable at upload time."""
+
+    def _save(self, name, content):
+        raise OSError("R2 endpoint unreachable")
+
+
+def reload_settings_with(env):
+    """Re-evaluate the settings module under a given environment.
+
+    django.conf.settings copies values at setup, so reloading the module does
+    not disturb the settings the running tests use.
+    """
+    import importlib
+    import os
+    from unittest import mock
+
+    from valley_investment import settings as settings_module
+
+    base = {
+        "SECRET_KEY": "test-key-not-used-for-anything-real-0123456789",
+        "DEBUG": "False",
+    }
+    with mock.patch.dict(os.environ, {**base, **env}, clear=False):
+        for key in ("R2_BUCKET_NAME", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
+                    "R2_ENDPOINT", "R2_ACCOUNT_ID", "R2_REGION"):
+            if key not in env:
+                os.environ.pop(key, None)
+        return importlib.reload(settings_module)
+
+
+class R2StorageConfigTests(TestCase):
+    R2_ENV = {
+        "R2_BUCKET_NAME": "valley-proofs",
+        "R2_ACCESS_KEY_ID": "test-access-key",
+        "R2_SECRET_ACCESS_KEY": "test-secret-key",
+        "R2_ENDPOINT": "https://acct123.r2.cloudflarestorage.com",
+        "R2_REGION": "auto",
+    }
+
+    def test_falls_back_to_local_disk_without_credentials(self):
+        reloaded = reload_settings_with({})
+        self.assertFalse(reloaded.USE_R2)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["BACKEND"],
+            "django.core.files.storage.FileSystemStorage",
+        )
+
+    def test_partial_credentials_do_not_enable_r2(self):
+        partial = dict(self.R2_ENV)
+        del partial["R2_SECRET_ACCESS_KEY"]
+        reloaded = reload_settings_with(partial)
+        self.assertFalse(reloaded.USE_R2)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["BACKEND"],
+            "django.core.files.storage.FileSystemStorage",
+        )
+
+    def test_r2_backend_selected_and_configured(self):
+        reloaded = reload_settings_with(self.R2_ENV)
+        self.assertTrue(reloaded.USE_R2)
+        default = reloaded.STORAGES["default"]
+        self.assertEqual(default["BACKEND"], "storages.backends.s3.S3Storage")
+
+        options = default["OPTIONS"]
+        self.assertEqual(options["bucket_name"], "valley-proofs")
+        self.assertEqual(options["endpoint_url"], "https://acct123.r2.cloudflarestorage.com")
+        self.assertEqual(options["region_name"], "auto")
+        # R2 only serves path-style URLs and only signs v4.
+        self.assertEqual(options["addressing_style"], "path")
+        self.assertEqual(options["signature_version"], "s3v4")
+        # R2 rejects uploads that carry an ACL.
+        self.assertIsNone(options["default_acl"])
+        # Payment proofs must not be publicly readable.
+        self.assertTrue(options["querystring_auth"])
+        self.assertFalse(options["file_overwrite"])
+
+    def test_endpoint_derived_from_account_id(self):
+        env = {k: v for k, v in self.R2_ENV.items() if k != "R2_ENDPOINT"}
+        env["R2_ACCOUNT_ID"] = "abc123account"
+        reloaded = reload_settings_with(env)
+        self.assertTrue(reloaded.USE_R2)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["OPTIONS"]["endpoint_url"],
+            "https://abc123account.r2.cloudflarestorage.com",
+        )
+
+    def test_explicit_endpoint_wins_over_account_id(self):
+        env = dict(self.R2_ENV)
+        env["R2_ACCOUNT_ID"] = "ignored-account"
+        reloaded = reload_settings_with(env)
+        self.assertEqual(
+            reloaded.STORAGES["default"]["OPTIONS"]["endpoint_url"],
+            "https://acct123.r2.cloudflarestorage.com",
+        )
+
+    def test_settings_module_left_in_local_disk_state(self):
+        """Guard against a reload leaking R2 config into later tests."""
+        reload_settings_with({})
+        from valley_investment import settings as settings_module
+
+        self.assertFalse(settings_module.USE_R2)
+
+
+class PaymentProofStorageTests(TestCase):
+    """The upload path must go through whatever default storage is configured,
+    which is what makes swapping in R2 work at all."""
+
+    def setUp(self):
+        RecordingStorage.saved = []
+        self.user = User.objects.create_user("0788111222", "userpass123")
+        self.plan = Plan.objects.get(level=1)
+        self.client.force_login(self.user)
+
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "investments.tests.RecordingStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+    )
+    def test_upload_is_written_through_default_storage(self):
+        response = self.client.post(
+            f"/invest/{self.plan.id}/", {"payment_screenshot": make_screenshot()}
+        )
+        self.assertEqual(response.status_code, 302)
+
+        inv = Investment.objects.get(user=self.user)
+        self.assertEqual(len(RecordingStorage.saved), 1)
+        # Upload key keeps the dated prefix the model asks for.
+        self.assertTrue(RecordingStorage.saved[0].startswith("payment_proofs/"))
+        self.assertTrue(inv.payment_screenshot.name.startswith("payment_proofs/"))
+        # Serving goes through the same backend.
+        self.assertTrue(inv.payment_screenshot.url)
+
+    @override_settings(
+        STORAGES={
+            "default": {"BACKEND": "investments.tests.FailingStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+    )
+    def test_storage_failure_does_not_500_or_create_a_proofless_investment(self):
+        with self.assertLogs("investments.views", level="ERROR"):
+            response = self.client.post(
+                f"/invest/{self.plan.id}/", {"payment_screenshot": make_screenshot()}
+            )
+
+        # Re-renders the form rather than redirecting or erroring out.
+        self.assertEqual(response.status_code, 200)
+        # An investment with no reviewable proof must never be recorded.
+        self.assertFalse(Investment.objects.filter(user=self.user).exists())
+        messages_shown = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("could not save your payment screenshot" in m for m in messages_shown))

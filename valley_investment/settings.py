@@ -7,18 +7,35 @@ from decimal import Decimal
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "django-insecure-$wv_fz^w#6ej@qfhe-v@mh8u@gaem^j!8#)duskq)!5f-=gef_",
-)
+# Set by Railway in both the build and the deploy, so it's the marker for
+# "this is a real deployment, not someone's laptop".
+ON_RAILWAY = bool(os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT"))
 
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+# A deployment must never fall back to the key committed in this file: anyone
+# reading the repo could forge session cookies and password-reset tokens.
+DEBUG = os.environ.get("DEBUG", "False" if ON_RAILWAY else "True") == "True"
+
+if DEBUG:
+    SECRET_KEY = os.environ.get(
+        "SECRET_KEY",
+        "django-insecure-$wv_fz^w#6ej@qfhe-v@mh8u@gaem^j!8#)duskq)!5f-=gef_",
+    )
+else:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "")
+    if not SECRET_KEY:
+        raise ImproperlyConfigured(
+            "SECRET_KEY must be set when DEBUG is False. Generate one with:\n"
+            "  python -c \"from django.core.management.utils import get_random_secret_key;"
+            " print(get_random_secret_key())\"\n"
+            "then set it as a SECRET_KEY environment variable on the service."
+        )
 
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()
@@ -28,20 +45,23 @@ CSRF_TRUSTED_ORIGINS = [
     o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
 ]
 
-# Railway assigns the public domain at deploy time, so it can't be baked into
-# ALLOWED_HOSTS by hand - pick it up from the environment it injects.
-for _railway_var in ("RAILWAY_PUBLIC_DOMAIN", "RAILWAY_PRIVATE_DOMAIN"):
-    _railway_domain = os.environ.get(_railway_var, "").strip()
-    if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(_railway_domain)
-        if _railway_var == "RAILWAY_PUBLIC_DOMAIN":
-            _railway_origin = f"https://{_railway_domain}"
-            if _railway_origin not in CSRF_TRUSTED_ORIGINS:
-                CSRF_TRUSTED_ORIGINS.append(_railway_origin)
+if ON_RAILWAY:
+    # Railway generates the public domain (e.g. valley-production-3535.up.railway.app)
+    # after the service is created, and does *not* inject it as RAILWAY_PUBLIC_DOMAIN,
+    # so there is no variable to read it from - match the whole domain space instead.
+    # Only Railway's own proxy can route to this container, so a wildcard here does
+    # not let anyone else's app reach it.
+    for _host in (".up.railway.app", "healthcheck.railway.app"):
+        if _host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host)
+    if "https://*.up.railway.app" not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append("https://*.up.railway.app")
 
-# Railway's healthcheck hits the container with its own Host header.
-if os.environ.get("RAILWAY_ENVIRONMENT_NAME") and "healthcheck.railway.app" not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append("healthcheck.railway.app")
+    # Only the private domain is published as a variable; it's how other
+    # services in the project reach this one.
+    _private_domain = os.environ.get("RAILWAY_PRIVATE_DOMAIN", "").strip()
+    if _private_domain and _private_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_private_domain)
 
 # Hardening that only makes sense once we're not on the local dev server.
 if not DEBUG:
@@ -161,6 +181,49 @@ STORAGES = {
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# --- Payment proof storage (Cloudflare R2) ---
+# Payment screenshots are the only user uploads, and they are the evidence
+# behind every approved investment. On a host with an ephemeral disk they would
+# be lost on each redeploy, so keep them in R2 whenever it is configured. With
+# no R2 credentials the app falls back to local disk, which is what local
+# development and the test suite use.
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "").strip()
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID", "").strip()
+R2_REGION = os.environ.get("R2_REGION", "auto").strip() or "auto"
+
+# R2's S3 endpoint is derivable from the account ID, so accept either.
+R2_ENDPOINT = os.environ.get("R2_ENDPOINT", "").strip()
+if not R2_ENDPOINT and R2_ACCOUNT_ID:
+    R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+USE_R2 = all([R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT])
+
+if USE_R2:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET_NAME,
+            "access_key": R2_ACCESS_KEY_ID,
+            "secret_key": R2_SECRET_ACCESS_KEY,
+            "endpoint_url": R2_ENDPOINT,
+            "region_name": R2_REGION,
+            # R2 only serves the path-style endpoint, and only signs v4.
+            "addressing_style": "path",
+            "signature_version": "s3v4",
+            # R2 has no ACL support; sending one makes every upload fail.
+            "default_acl": None,
+            "object_parameters": {"CacheControl": "private, max-age=3600"},
+            # Payment proofs identify people and amounts, so the bucket stays
+            # private and every URL is a short-lived signed one.
+            "querystring_auth": True,
+            "querystring_expire": 3600,
+            # Never let one upload silently overwrite another's proof.
+            "file_overwrite": False,
+        },
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

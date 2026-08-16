@@ -59,28 +59,75 @@ they override the config file.
    into the service, and the app picks it up automatically. This is not
    optional: Railway's filesystem is ephemeral, so a SQLite file is wiped on
    every deploy along with all users and investments.
-2. Set the service variables:
+2. Set `SECRET_KEY` as a service variable. It is **required** — with `DEBUG`
+   off the app refuses to start rather than fall back to the key committed in
+   `settings.py`, which anyone reading the repo could use to forge session
+   cookies and password-reset tokens. Generate one with:
 
-   ```
-   SECRET_KEY=<a long random string>
-   DEBUG=False
+   ```bash
+   python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
    ```
 
-   `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` do not need to be set — the app
-   adds Railway's generated domain (`RAILWAY_PUBLIC_DOMAIN`) to both. Set them
-   anyway if you attach a custom domain.
+   `DEBUG` defaults to off on Railway, so it does not need to be set (setting
+   `DEBUG=True` there will expose tracebacks and settings to visitors).
+   `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` do not need to be set either —
+   the app matches Railway's `*.up.railway.app` domain space, since Railway
+   generates the service's public domain without publishing it as a variable.
+   Set `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` explicitly if you attach a
+   custom domain.
 3. Deploy. The build runs `collectstatic`, and the start command runs `migrate`
    before handing off to gunicorn, which serves static files through WhiteNoise.
-4. Create the admin account once, from the service's shell (`railway run`, or
-   the dashboard's terminal):
+4. Create the admin account. Railway has no convenient interactive shell, so
+   set these variables and the `accounts.0002_admin_from_env` migration creates
+   the account during the deploy's `migrate` step:
+
+   ```
+   ADMIN_PHONE=0783108892
+   ADMIN_PASSWORD=<a strong password>
+   ADMIN_FULL_NAME=Valley Admin
+   ```
+
+   The migration is skipped entirely unless both `ADMIN_PHONE` and
+   `ADMIN_PASSWORD` are set, and it never touches an account that already
+   exists — changing `ADMIN_PASSWORD` afterwards does **not** reset the
+   password, so change it from the admin UI instead. Once the account exists
+   you can delete all three variables.
+
+   Where you do have a shell, the equivalent one-off is:
 
    ```bash
    python manage.py create_admin 0783108892 <password> --full-name "Valley Admin"
    ```
 
-Note that uploaded payment screenshots go to `MEDIA_ROOT` on local disk, which
-is also ephemeral — attach a Railway volume mounted at `/app/media` (or move to
-object storage) so proofs survive a redeploy.
+5. Set the Cloudflare R2 variables so payment screenshots survive a redeploy
+   (see below). Without them, uploads go to local disk, which on Railway is
+   erased on every deploy — taking the proof behind every approved investment
+   with it.
+
+## Payment screenshot storage (Cloudflare R2)
+
+Payment proofs are the only user uploads, and they are the evidence behind
+every approved investment, so they are stored in Cloudflare R2 rather than on
+the container's disk. Set these variables to turn it on:
+
+```
+R2_BUCKET_NAME=<bucket>
+R2_ACCESS_KEY_ID=<key id>
+R2_SECRET_ACCESS_KEY=<secret>
+R2_ACCOUNT_ID=<cloudflare account id>     # or set R2_ENDPOINT directly
+R2_ENDPOINT=https://<account id>.r2.cloudflarestorage.com
+R2_REGION=auto
+```
+
+`R2_ENDPOINT` is derived from `R2_ACCOUNT_ID` when it isn't set explicitly.
+R2 is used only when the bucket, both credentials, and an endpoint are all
+present — a partial configuration falls back to local disk rather than failing
+half-configured, so local development and the test suite need no R2 access.
+
+The bucket stays **private**: image URLs are short-lived pre-signed links
+(1 hour), because a proof screenshot shows a real person's payment details.
+Uploads never overwrite an existing key, and no ACL is sent (R2 rejects
+uploads that carry one).
 
 ## Running tests
 
