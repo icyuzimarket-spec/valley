@@ -6,6 +6,7 @@ import os
 from decimal import Decimal
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +27,21 @@ ALLOWED_HOSTS = [
 CSRF_TRUSTED_ORIGINS = [
     o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
 ]
+
+# Railway assigns the public domain at deploy time, so it can't be baked into
+# ALLOWED_HOSTS by hand - pick it up from the environment it injects.
+for _railway_var in ("RAILWAY_PUBLIC_DOMAIN", "RAILWAY_PRIVATE_DOMAIN"):
+    _railway_domain = os.environ.get(_railway_var, "").strip()
+    if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_railway_domain)
+        if _railway_var == "RAILWAY_PUBLIC_DOMAIN":
+            _railway_origin = f"https://{_railway_domain}"
+            if _railway_origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_railway_origin)
+
+# Railway's healthcheck hits the container with its own Host header.
+if os.environ.get("RAILWAY_ENVIRONMENT_NAME") and "healthcheck.railway.app" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("healthcheck.railway.app")
 
 # Hardening that only makes sense once we're not on the local dev server.
 if not DEBUG:
@@ -89,11 +105,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "valley_investment.wsgi.application"
 
 
+# Hosts with an ephemeral filesystem (Railway et al.) wipe the container's disk
+# on every deploy, so a SQLite file there loses every user and investment. When
+# a managed database is attached, DATABASE_URL points at it; fall back to SQLite
+# for local development.
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 AUTH_USER_MODEL = "accounts.User"

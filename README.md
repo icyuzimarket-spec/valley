@@ -48,6 +48,40 @@ requirements.txt`, create a `.env` from `.env.example` (set `DEBUG=False`,
 run `migrate` + `collectstatic`, then wire up the Web tab (source code path,
 virtualenv path, WSGI file, and static/media URL mappings) and reload.
 
+## Deploying to Railway
+
+The repo ships a `railway.json` (and an equivalent `Procfile`), so Railway
+builds and starts the app without any command typed into the dashboard — leave
+the service's **Build Command** and **Start Command** fields empty, otherwise
+they override the config file.
+
+1. Add a **Postgres** database to the project. Railway injects `DATABASE_URL`
+   into the service, and the app picks it up automatically. This is not
+   optional: Railway's filesystem is ephemeral, so a SQLite file is wiped on
+   every deploy along with all users and investments.
+2. Set the service variables:
+
+   ```
+   SECRET_KEY=<a long random string>
+   DEBUG=False
+   ```
+
+   `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` do not need to be set — the app
+   adds Railway's generated domain (`RAILWAY_PUBLIC_DOMAIN`) to both. Set them
+   anyway if you attach a custom domain.
+3. Deploy. The build runs `collectstatic`, and the start command runs `migrate`
+   before handing off to gunicorn, which serves static files through WhiteNoise.
+4. Create the admin account once, from the service's shell (`railway run`, or
+   the dashboard's terminal):
+
+   ```bash
+   python manage.py create_admin 0783108892 <password> --full-name "Valley Admin"
+   ```
+
+Note that uploaded payment screenshots go to `MEDIA_ROOT` on local disk, which
+is also ephemeral — attach a Railway volume mounted at `/app/media` (or move to
+object storage) so proofs survive a redeploy.
+
 ## Running tests
 
 ```powershell
