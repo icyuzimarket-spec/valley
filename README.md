@@ -77,8 +77,23 @@ they override the config file.
    custom domain.
 3. Deploy. The build runs `collectstatic`, and the start command runs `migrate`
    before handing off to gunicorn, which serves static files through WhiteNoise.
-4. Create the admin account once, from the service's shell (`railway run`, or
-   the dashboard's terminal):
+4. Create the admin account. Railway has no convenient interactive shell, so
+   set these variables and the `accounts.0002_admin_from_env` migration creates
+   the account during the deploy's `migrate` step:
+
+   ```
+   ADMIN_PHONE=0783108892
+   ADMIN_PASSWORD=<a strong password>
+   ADMIN_FULL_NAME=Valley Admin
+   ```
+
+   The migration is skipped entirely unless both `ADMIN_PHONE` and
+   `ADMIN_PASSWORD` are set, and it never touches an account that already
+   exists — changing `ADMIN_PASSWORD` afterwards does **not** reset the
+   password, so change it from the admin UI instead. Once the account exists
+   you can delete all three variables.
+
+   Where you do have a shell, the equivalent one-off is:
 
    ```bash
    python manage.py create_admin 0783108892 <password> --full-name "Valley Admin"
