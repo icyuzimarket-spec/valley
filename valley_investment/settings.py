@@ -179,7 +179,7 @@ STORAGES = {
     },
 }
 
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Payment proof storage (Cloudflare R2) ---
@@ -199,9 +199,45 @@ R2_ENDPOINT = os.environ.get("R2_ENDPOINT", "").strip()
 if not R2_ENDPOINT and R2_ACCOUNT_ID:
     R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
-USE_R2 = all([R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT])
+_R2_SETTINGS = {
+    "R2_BUCKET_NAME": R2_BUCKET_NAME,
+    "R2_ACCESS_KEY_ID": R2_ACCESS_KEY_ID,
+    "R2_SECRET_ACCESS_KEY": R2_SECRET_ACCESS_KEY,
+    "R2_ENDPOINT (or R2_ACCOUNT_ID)": R2_ENDPOINT,
+}
+R2_MISSING_SETTINGS = sorted(name for name, value in _R2_SETTINGS.items() if not value)
+USE_R2 = not R2_MISSING_SETTINGS
+
+# A half-configured bucket is always a mistake: uploads would silently land on
+# the local disk, which every managed host wipes on redeploy, and the proof
+# behind an approved investment would be gone. Fail loudly instead of storing
+# payment evidence somewhere it cannot survive.
+if R2_MISSING_SETTINGS and len(R2_MISSING_SETTINGS) < len(_R2_SETTINGS):
+    raise ImproperlyConfigured(
+        "Cloudflare R2 is partially configured. Missing: "
+        + ", ".join(R2_MISSING_SETTINGS)
+        + ". Set all of them, or none to store uploads on the local disk."
+    )
 
 if USE_R2:
+    from botocore.config import Config as _BotoConfig
+
+    # boto3 1.36+ defaults to `when_supported`, which sends every upload as a
+    # chunked body with a trailing CRC32 checksum (Content-Encoding:
+    # aws-chunked, X-Amz-Content-SHA256: STREAMING-UNSIGNED-PAYLOAD-TRAILER).
+    # R2 does not implement that trailer flow, so each screenshot upload is
+    # rejected. `when_required` sends a plain body, which R2 accepts.
+    #
+    # django-storages only builds its own botocore Config when none is passed,
+    # so the addressing style and signature version have to be repeated here.
+    _R2_CLIENT_CONFIG = _BotoConfig(
+        # R2 only serves the path-style endpoint, and only signs v4.
+        s3={"addressing_style": "path"},
+        signature_version="s3v4",
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    )
+
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
@@ -210,9 +246,7 @@ if USE_R2:
             "secret_key": R2_SECRET_ACCESS_KEY,
             "endpoint_url": R2_ENDPOINT,
             "region_name": R2_REGION,
-            # R2 only serves the path-style endpoint, and only signs v4.
-            "addressing_style": "path",
-            "signature_version": "s3v4",
+            "client_config": _R2_CLIENT_CONFIG,
             # R2 has no ACL support; sending one makes every upload fail.
             "default_acl": None,
             "object_parameters": {"CacheControl": "private, max-age=3600"},
