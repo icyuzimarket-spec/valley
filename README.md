@@ -59,16 +59,22 @@ they override the config file.
    into the service, and the app picks it up automatically. This is not
    optional: Railway's filesystem is ephemeral, so a SQLite file is wiped on
    every deploy along with all users and investments.
-2. Set the service variables:
+2. Set `SECRET_KEY` as a service variable. It is **required** — with `DEBUG`
+   off the app refuses to start rather than fall back to the key committed in
+   `settings.py`, which anyone reading the repo could use to forge session
+   cookies and password-reset tokens. Generate one with:
 
-   ```
-   SECRET_KEY=<a long random string>
-   DEBUG=False
+   ```bash
+   python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
    ```
 
-   `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` do not need to be set — the app
-   adds Railway's generated domain (`RAILWAY_PUBLIC_DOMAIN`) to both. Set them
-   anyway if you attach a custom domain.
+   `DEBUG` defaults to off on Railway, so it does not need to be set (setting
+   `DEBUG=True` there will expose tracebacks and settings to visitors).
+   `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` do not need to be set either —
+   the app matches Railway's `*.up.railway.app` domain space, since Railway
+   generates the service's public domain without publishing it as a variable.
+   Set `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` explicitly if you attach a
+   custom domain.
 3. Deploy. The build runs `collectstatic`, and the start command runs `migrate`
    before handing off to gunicorn, which serves static files through WhiteNoise.
 4. Create the admin account once, from the service's shell (`railway run`, or
