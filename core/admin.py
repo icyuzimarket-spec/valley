@@ -15,6 +15,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         "min_withdrawal",
         "maintenance_notice",
         "maintenance_message",
+        "maintenance_whatsapp",
     ]
 
     def has_add_permission(self, request):

@@ -23,13 +23,26 @@ class SiteSettings(models.Model):
     min_withdrawal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     maintenance_notice = models.BooleanField(
         default=False,
-        help_text="Show a site-wide notice on every page. Untick it as soon as the system is back.",
+        help_text=(
+            "Replace the whole site with the maintenance page. Visitors see nothing "
+            "else until this is unticked - staff and the admin are never blocked."
+        ),
+    )
+    maintenance_whatsapp = models.CharField(
+        max_length=20,
+        blank=True,
+        default="250795927291",
+        help_text=(
+            "WhatsApp number for help during the outage. International format without "
+            "'+' or the leading 0, e.g. 250795927291 for 0795 927 291 - wa.me links "
+            "do not work with the local format."
+        ),
     )
     maintenance_message = models.CharField(
         max_length=255,
         blank=True,
         default="The display system has a technical problem. Our team is fixing it - please wait.",
-        help_text="Text shown in the site-wide notice.",
+        help_text="Text shown on the maintenance page.",
     )
 
     class Meta:

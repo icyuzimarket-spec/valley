@@ -101,6 +101,9 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # After authentication: it lets staff through so they can switch
+    # maintenance mode back off.
+    "core.middleware.MaintenanceModeMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
