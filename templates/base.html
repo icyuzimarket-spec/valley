@@ -47,16 +47,6 @@
     </div>
   </nav>
 
-  {% if site_settings.maintenance_notice %}
-    <div class="maintenance-notice" role="status">
-      <div class="container d-flex flex-wrap align-items-center justify-content-center gap-2 text-center">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <span>Maintenance mode is ON - visitors see only the maintenance page.</span>
-        <a href="/admin/core/sitesettings/" class="maintenance-notice-link">Switch it off</a>
-      </div>
-    </div>
-  {% endif %}
-
   {% if messages %}
     <div class="container mt-3">
       {% for message in messages %}

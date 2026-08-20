@@ -429,30 +429,17 @@ a {
   }
 }
 
-/* ---------- Site-wide maintenance notice ---------- */
-.maintenance-notice {
-  background: linear-gradient(135deg, var(--vi-orange), var(--vi-orange-dark));
-  color: var(--vi-white);
-  font-weight: 600;
-  padding: 0.65rem 0;
-  box-shadow: 0 2px 10px rgba(8, 22, 51, 0.18);
-}
-
-.maintenance-notice i {
-  font-size: 1.05rem;
-}
-
-.maintenance-notice-link {
-  color: var(--vi-white);
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.maintenance-notice-link:hover {
-  color: var(--vi-navy-dark);
-}
-
 /* ---------- Full-page maintenance screen ---------- */
+/* This page is standalone - it does not load Bootstrap, so it does not get
+   Bootstrap's border-box reset either. Without this the card's padding pushes
+   it wider than a phone screen. */
+.maintenance-page,
+.maintenance-page *,
+.maintenance-page *::before,
+.maintenance-page *::after {
+  box-sizing: border-box;
+}
+
 .maintenance-page {
   background: radial-gradient(circle at top right, var(--vi-navy-light), var(--vi-navy-dark) 70%);
   color: var(--vi-white);
