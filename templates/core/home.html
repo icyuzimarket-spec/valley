@@ -61,33 +61,24 @@
   <h2 class="text-center mb-4">Investment Plans</h2>
   <div class="row g-4">
     {% for plan in plans %}
-    <div class="col-12 col-md-6 col-lg-4">
+    <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
       <div class="plan-card">
-        <div class="plan-head">
-          <h5 class="plan-title">Valley Lev {{ plan.level }}</h5>
-          <span class="plan-duration">{{ plan.duration_days }} days</span>
+        <div class="plan-card-header">
+          <span class="plan-name">Valley Lev {{ plan.level }}</span>
+          <span class="badge-day">{{ plan.duration_days }} days</span>
         </div>
-        <div class="plan-row">
-          <span class="plan-label"><i class="bi bi-cash-coin"></i> Price</span>
-          <span class="plan-value">{{ plan.price|floatformat:0 }} frw</span>
+        <div class="plan-card-body">
+          <div class="plan-row"><span class="plan-label"><i class="bi bi-cash-stack"></i>Price</span><strong>{{ plan.price|floatformat:0 }} frw</strong></div>
+          <div class="plan-row"><span class="plan-label"><i class="bi bi-graph-up-arrow"></i>Daily Income</span><strong>{{ plan.daily_income|floatformat:0 }} frw</strong></div>
+          <div class="plan-row"><span class="plan-label"><i class="bi bi-trophy"></i>All Return</span><strong>{{ plan.all_return|floatformat:0 }} frw</strong></div>
         </div>
-        <div class="plan-row">
-          <span class="plan-label"><i class="bi bi-graph-up-arrow"></i> Daily Income</span>
-          <span class="plan-value">{{ plan.daily_income|floatformat:0 }} frw</span>
-        </div>
-        <div class="plan-row">
-          <span class="plan-label"><i class="bi bi-trophy"></i> All Return</span>
-          <span class="plan-value">{{ plan.all_return|floatformat:0 }} frw</span>
-        </div>
-        {% if user.is_authenticated and not user.is_staff %}
-          <div class="plan-action">
-            <a href="{% url 'investments:invest' plan.id %}" class="btn btn-outline-vi">Invest</a>
-          </div>
-        {% elif not user.is_authenticated %}
-          <div class="plan-action">
+        <div class="plan-card-footer">
+          {% if user.is_authenticated and not user.is_staff %}
+            <a href="{% url 'investments:invest' plan.id %}" class="btn btn-vi-orange">Invest</a>
+          {% elif not user.is_authenticated %}
             <a href="{% url 'accounts:login' %}?next={% url 'investments:invest' plan.id %}" class="btn btn-outline-vi">Invest</a>
-          </div>
-        {% endif %}
+          {% endif %}
+        </div>
       </div>
     </div>
     {% endfor %}
