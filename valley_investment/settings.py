@@ -3,6 +3,7 @@ Django settings for valley_investment project.
 """
 
 import os
+import sys
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
@@ -76,6 +77,31 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
 
 
+# ---------------------------------------------------------------------------
+# Maintenance mode
+#
+# While this is True the site serves nothing but the maintenance page - every
+# page, every visitor, staff and the Django admin included. There is no switch
+# in the admin and no environment variable on purpose: the only way back is to
+# set this to False, commit, and deploy.
+# ---------------------------------------------------------------------------
+MAINTENANCE_MODE = True
+
+# The test suite exercises the real site; with the maintenance page in front of
+# every URL it would just get a 503 back from all of them. The tests that are
+# about maintenance mode switch it on themselves with override_settings.
+if "test" in sys.argv:
+    MAINTENANCE_MODE = False
+
+MAINTENANCE_MESSAGE = (
+    "The display system has a technical problem. Our team is fixing it - please wait."
+)
+
+# wa.me needs the international format: no '+', no leading 0.
+# 0795 927 291 in Rwanda (+250) is 250795927291.
+MAINTENANCE_WHATSAPP = "250795927291"
+
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -96,14 +122,14 @@ MIDDLEWARE = [
     # would shadow live edits during development. Only needed once DEBUG is
     # off - runserver's own staticfiles handling covers local dev.
     *([] if DEBUG else ["whitenoise.middleware.WhiteNoiseMiddleware"]),
+    # Ahead of session and auth: a blocked request needs neither, and this
+    # way maintenance mode cannot be bypassed by anything downstream.
+    "core.middleware.MaintenanceModeMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    # After authentication: it lets staff through so they can switch
-    # maintenance mode back off.
-    "core.middleware.MaintenanceModeMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 

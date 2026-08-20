@@ -18,14 +18,14 @@
       <p class="maintenance-brand">Valley<span> Investment</span></p>
       <h1>We are under maintenance</h1>
       <p class="maintenance-text">
-        {{ site_settings.maintenance_message|default:"The display system has a technical problem. Our team is fixing it - please wait." }}
+        {{ maintenance_message }}
       </p>
       <p class="maintenance-text">
         Your account and your money are safe. Please check back shortly.
       </p>
-      {% if site_settings.maintenance_whatsapp %}
-        <a class="maintenance-help" href="https://wa.me/{{ site_settings.maintenance_whatsapp }}" target="_blank" rel="noopener">
-          <i class="bi bi-whatsapp"></i> Need help? WhatsApp {{ site_settings.maintenance_whatsapp }}
+      {% if maintenance_whatsapp %}
+        <a class="maintenance-help" href="https://wa.me/{{ maintenance_whatsapp }}" target="_blank" rel="noopener">
+          <i class="bi bi-whatsapp"></i> Need help? WhatsApp {{ maintenance_whatsapp }}
         </a>
       {% endif %}
     </div>

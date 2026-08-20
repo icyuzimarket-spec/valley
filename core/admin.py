@@ -13,9 +13,6 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         "payment_code",
         "fallback_referrer",
         "min_withdrawal",
-        "maintenance_notice",
-        "maintenance_message",
-        "maintenance_whatsapp",
     ]
 
     def has_add_permission(self, request):
