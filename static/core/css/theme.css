@@ -427,3 +427,16 @@ a {
     max-width: 1200px;
   }
 }
+
+/* ---------- Site-wide maintenance notice ---------- */
+.maintenance-notice {
+  background: linear-gradient(135deg, var(--vi-orange), var(--vi-orange-dark));
+  color: var(--vi-white);
+  font-weight: 600;
+  padding: 0.65rem 0;
+  box-shadow: 0 2px 10px rgba(8, 22, 51, 0.18);
+}
+
+.maintenance-notice i {
+  font-size: 1.05rem;
+}

@@ -3,6 +3,8 @@ from django.urls import reverse
 
 from accounts.models import User
 
+from .models import SiteSettings
+
 
 class NavbarAndAccessTests(TestCase):
     def setUp(self):
@@ -46,3 +48,21 @@ class NavbarAndAccessTests(TestCase):
         self.client.force_login(self.regular_user)
         response = self.client.get(reverse("core:dashboard_redirect"))
         self.assertRedirects(response, reverse("core:user_dashboard"))
+
+
+class MaintenanceNoticeTests(TestCase):
+    def test_notice_hidden_when_switched_off(self):
+        settings_obj = SiteSettings.load()
+        settings_obj.maintenance_notice = False
+        settings_obj.save()
+        response = self.client.get(reverse("core:home"))
+        self.assertNotContains(response, "maintenance-notice")
+
+    def test_notice_shown_on_every_page_when_switched_on(self):
+        settings_obj = SiteSettings.load()
+        settings_obj.maintenance_notice = True
+        settings_obj.maintenance_message = "The display system has a technical problem."
+        settings_obj.save()
+        for name in ["core:home", "accounts:login", "accounts:signup"]:
+            response = self.client.get(reverse(name))
+            self.assertContains(response, "The display system has a technical problem.")

@@ -47,6 +47,15 @@
     </div>
   </nav>
 
+  {% if site_settings.maintenance_notice %}
+    <div class="maintenance-notice" role="status">
+      <div class="container d-flex align-items-center justify-content-center gap-2 text-center">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ site_settings.maintenance_message }}</span>
+      </div>
+    </div>
+  {% endif %}
+
   {% if messages %}
     <div class="container mt-3">
       {% for message in messages %}

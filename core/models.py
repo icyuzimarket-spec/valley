@@ -21,6 +21,16 @@ class SiteSettings(models.Model):
         help_text="Users who sign up without a referral code are attributed to this admin.",
     )
     min_withdrawal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    maintenance_notice = models.BooleanField(
+        default=False,
+        help_text="Show a site-wide notice on every page. Untick it as soon as the system is back.",
+    )
+    maintenance_message = models.CharField(
+        max_length=255,
+        blank=True,
+        default="The display system has a technical problem. Our team is fixing it - please wait.",
+        help_text="Text shown in the site-wide notice.",
+    )
 
     class Meta:
         verbose_name = "Site Settings"
