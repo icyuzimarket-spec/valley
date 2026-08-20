@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Under Maintenance &bull; Valley Investment</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="{% static 'core/css/theme.css' %}" rel="stylesheet">
+</head>
+<body class="maintenance-page">
+  <main class="maintenance-main">
+    <div class="maintenance-card">
+      <div class="maintenance-icon"><i class="bi bi-tools"></i></div>
+      <p class="maintenance-brand">Valley<span> Investment</span></p>
+      <h1>We are under maintenance</h1>
+      <p class="maintenance-text">
+        {{ site_settings.maintenance_message|default:"The display system has a technical problem. Our team is fixing it - please wait." }}
+      </p>
+      <p class="maintenance-text">
+        Your account and your money are safe. Please check back shortly.
+      </p>
+      {% if site_settings.maintenance_whatsapp %}
+        <a class="maintenance-help" href="https://wa.me/{{ site_settings.maintenance_whatsapp }}" target="_blank" rel="noopener">
+          <i class="bi bi-whatsapp"></i> Need help? WhatsApp {{ site_settings.maintenance_whatsapp }}
+        </a>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>
